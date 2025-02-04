@@ -1,18 +1,28 @@
 import java.util.Scanner;
 import java.util.Random;
+import java.util.HashMap;
 
-// Base Character Class
 class Character {
     String name;
     int health;
+    int maxHealth;
     int attackDamage;
     int defense;
+    int mana;
+    int maxMana;
+    String element;
+    HashMap<String, Integer> inventory;
 
-    public Character(String name, int health, int attackDamage, int defense) {
+    public Character(String name, int health, int attackDamage, int defense, String element) {
         this.name = name;
+        this.maxHealth = health;
         this.health = health;
         this.attackDamage = attackDamage;
         this.defense = defense;
+        this.element = element;
+        this.maxMana = 50;
+        this.mana = maxMana;
+        this.inventory = new HashMap<>();
     }
 
     public boolean isAlive() {
@@ -21,82 +31,84 @@ class Character {
 
     public void takeDamage(int damage) {
         health -= Math.max(damage - defense, 0);
+        health = Math.min(health, maxHealth);
+    }
+
+    public void restoreMana(int amount) {
+        mana = Math.min(mana + amount, maxMana);
     }
 }
 
-// Player Class
 class Player extends Character {
-    int potions;
     int experience;
     int level;
 
     public Player(String name) {
-        super(name, 100, 15, 10);
-        potions = 3;
+        super(name, 100, 15, 10, "Neutral");
         experience = 0;
         level = 1;
+        inventory.put("Potion", 3);
+        inventory.put("Ether", 2);
     }
 
-    public void usePotion() {
-        if (potions > 0) {
-            health += 30;
-            potions--;
-            System.out.println("Used potion! Health is now " + health);
-        } else {
-            System.out.println("No potions left!");
-        }
-    }
-
-    public void gainExperience(int exp) {
-        experience += exp;
-        if (experience >= level * 50) {
-            levelUp();
-        }
-    }
-
-    private void levelUp() {
+    public void levelUp() {
         level++;
         attackDamage += 5;
         defense += 3;
-        health += 20;
+        maxHealth += 20;
+        health = maxHealth;
+        maxMana += 10;
+        mana = maxMana;
         System.out.println("Level up! You are now level " + level);
     }
-}
 
-// Enemy Class
-class Enemy extends Character {
-    public Enemy(String name, int health, int attackDamage, int defense) {
-        super(name, health, attackDamage, defense);
+    public void learnElementalSkill(String element) {
+        this.element = element;
+        System.out.println("You've mastered the power of " + element + "!");
     }
 }
 
-// Main Game Class
-public class SimpleRPG {
+class Enemy extends Character {
+    private String[] elementalPhrases = {
+        "The air crackles with energy!",
+        "You feel a strange aura...",
+        "The ground trembles beneath you!"
+    };
+
+    public Enemy(String name, int health, int attackDamage, int defense, String element) {
+        super(name, health, attackDamage, defense, element);
+    }
+
+    public void elementalRoar() {
+        System.out.println(elementalPhrases[new Random().nextInt(elementalPhrases.length)]);
+    }
+}
+
+public class EnhancedRPG {
     private Player player;
     private Scanner scanner;
     private Random random;
 
-    public SimpleRPG() {
+    public EnhancedRPG() {
         scanner = new Scanner(System.in);
         random = new Random();
     }
 
     public void startGame() {
-        System.out.println("Welcome to SimpleRPG!");
+        System.out.println("=== ELEMENTAL QUEST ===");
         System.out.print("Enter your name: ");
         String name = scanner.nextLine();
         player = new Player(name);
-        
         gameLoop();
     }
 
     private void gameLoop() {
         while (player.isAlive()) {
-            System.out.println("\n----------------------------");
-            System.out.println("What would you like to do?");
+            System.out.println("\n=== MAIN MENU ===");
             System.out.println("1. Explore");
             System.out.println("2. Check Status");
-            System.out.println("3. Quit");
+            System.out.println("3. View Inventory");
+            System.out.println("4. Quit");
             System.out.print("Choice: ");
             
             int choice = scanner.nextInt();
@@ -109,33 +121,68 @@ public class SimpleRPG {
                     showStatus();
                     break;
                 case 3:
+                    showInventory();
+                    break;
+                case 4:
                     System.out.println("Thanks for playing!");
                     return;
                 default:
                     System.out.println("Invalid choice!");
             }
         }
-        System.out.println("\nGame Over!");
+        System.out.println("\nGAME OVER!");
     }
 
     private void explore() {
-        System.out.println("\nYou venture into the wilderness...");
-        if (random.nextDouble() < 0.6) {
+        System.out.println("\nYou venture into the unknown...");
+        int encounter = random.nextInt(100);
+        
+        if (encounter < 50) {
             encounterEnemy();
+        } else if (encounter < 75) {
+            findTreasure();
         } else {
-            System.out.println("You found nothing of interest.");
+            System.out.println("You discover an ancient shrine...");
+            discoverShrine();
         }
     }
 
     private void encounterEnemy() {
         Enemy enemy = generateRandomEnemy();
-        System.out.println("A wild " + enemy.name + " appears!");
+        System.out.println("\nA wild " + enemy.name + " (" + enemy.element + ") appears!");
+        combatMenu(player, enemy);
+        
+        if (player.isAlive()) {
+            int exp = random.nextInt(20) + 10;
+            System.out.println("You gained " + exp + " XP!");
+            player.gainExperience(exp);
+            if (player.experience >= player.level * 50) {
+                player.levelUp();
+            }
+        }
+    }
 
+    private Enemy generateRandomEnemy() {
+        String[] enemies = {"Fire Imp", "Water Nymph", "Earth Golem", "Storm Wolf"};
+        String name = enemies[random.nextInt(enemies.length)];
+        
+        return switch (name) {
+            case "Fire Imp" -> new Enemy(name, 50, 18, 8, "Fire");
+            case "Water Nymph" -> new Enemy(name, 60, 15, 12, "Water");
+            case "Earth Golem" -> new Enemy(name, 80, 20, 15, "Earth");
+            case "Storm Wolf" -> new Enemy(name, 55, 22, 10, "Air");
+            default -> new Enemy(name, 60, 18, 10, "Neutral");
+        };
+    }
+
+    private void combatMenu(Player player, Enemy enemy) {
         while (enemy.isAlive() && player.isAlive()) {
-            System.out.println("\n" + player.name + " HP: " + player.health);
-            System.out.println(enemy.name + " HP: " + enemy.health);
+            System.out.println("\n" + player.name + " HP: " + player.health + "/" + player.maxHealth + " | MP: " + player.mana + "/" + player.maxMana);
+            System.out.println(enemy.name + " HP: " + enemy.health + "/" + enemy.maxHealth);
             System.out.println("1. Attack");
-            System.out.println("2. Use Potion");
+            System.out.println("2. Elemental Skill");
+            System.out.println("3. Use Item");
+            System.out.println("4. Attempt Flee");
             System.out.print("Choice: ");
             
             int choice = scanner.nextInt();
@@ -145,57 +192,188 @@ public class SimpleRPG {
                     attack(player, enemy);
                     break;
                 case 2:
-                    player.usePotion();
+                    useElementalSkill(player, enemy);
+                    break;
+                case 3:
+                    useItem(player);
+                    break;
+                case 4:
+                    if (attemptFlee()) return;
                     break;
                 default:
                     System.out.println("Invalid choice!");
-                    continue;
             }
             
             if (enemy.isAlive()) {
+                enemy.elementalRoar();
                 attack(enemy, player);
             }
-        }
-        
-        if (player.isAlive()) {
-            int exp = random.nextInt(20) + 10;
-            System.out.println("You defeated the " + enemy.name + "! Gained " + exp + " XP");
-            player.gainExperience(exp);
         }
     }
 
     private void attack(Character attacker, Character defender) {
-        int damage = attacker.attackDamage + random.nextInt(5);
-        defender.takeDamage(damage);
-        System.out.println(attacker.name + " attacks for " + damage + " damage!");
+        int baseDamage = attacker.attackDamage + random.nextInt(5);
+        double elementMultiplier = calculateElementMultiplier(attacker.element, defender.element);
+        boolean isCritical = random.nextDouble() < 0.15;
+        
+        int finalDamage = (int)(baseDamage * elementMultiplier);
+        if (isCritical) {
+            finalDamage *= 2;
+            System.out.println("Critical hit!");
+        }
+        
+        defender.takeDamage(finalDamage);
+        System.out.printf("%s attacks with %s energy for %d damage!%n",
+            attacker.name, attacker.element, finalDamage);
+        
+        applyElementalEffect(attacker.element, defender);
     }
 
-    private Enemy generateRandomEnemy() {
-        String[] enemies = {"Goblin", "Skeleton", "Orc", "Spider"};
-        String name = enemies[random.nextInt(enemies.length)];
+    private double calculateElementMultiplier(String attackerElement, String defenderElement) {
+        HashMap<String, String> weaknesses = new HashMap<>();
+        weaknesses.put("Fire", "Earth");
+        weaknesses.put("Water", "Fire");
+        weaknesses.put("Earth", "Water");
+        weaknesses.put("Air", "Earth");
+
+        if (weaknesses.get(attackerElement) != null && 
+            weaknesses.get(attackerElement).equals(defenderElement)) return 1.5;
+        if (weaknesses.get(defenderElement) != null && 
+            weaknesses.get(defenderElement).equals(attackerElement)) return 0.75;
+        return 1.0;
+    }
+
+    private void applyElementalEffect(String element, Character target) {
+        if (random.nextDouble() < 0.3) {
+            switch(element) {
+                case "Fire":
+                    System.out.println(target.name + " is burning!");
+                    target.health -= 5;
+                    break;
+                case "Water":
+                    System.out.println(target.name + " is soaked and vulnerable!");
+                    target.defense -= 2;
+                    break;
+                case "Earth":
+                    System.out.println(target.name + " is staggered!");
+                    target.attackDamage -= 3;
+                    break;
+                case "Air":
+                    System.out.println(target.name + " is disoriented!");
+                    target.mana -= 10;
+                    break;
+            }
+        }
+    }
+
+    private void useElementalSkill(Player player, Enemy enemy) {
+        if (player.mana < 20) {
+            System.out.println("Not enough mana!");
+            return;
+        }
         
-        return switch (name) {
-            case "Goblin" -> new Enemy(name, 40, 10, 5);
-            case "Skeleton" -> new Enemy(name, 50, 12, 8);
-            case "Orc" -> new Enemy(name, 60, 15, 10);
-            case "Spider" -> new Enemy(name, 30, 8, 3);
-            default -> new Enemy(name, 50, 10, 5);
-        };
+        int skillDamage = (int)(player.attackDamage * 1.5);
+        System.out.println("You unleash " + player.element + " fury!");
+        enemy.takeDamage(skillDamage);
+        player.mana -= 20;
+        
+        if (player.element.equals("Water")) {
+            player.health = Math.min(player.health + 10, player.maxHealth);
+            System.out.println("Healing waters restore 10 HP!");
+        }
+    }
+
+    private void discoverShrine() {
+        String[] elements = {"Fire", "Water", "Earth", "Air"};
+        String element = elements[random.nextInt(elements.length)];
+        
+        System.out.println("You find a " + element + " Shrine!");
+        System.out.println("1. Touch the shrine");
+        System.out.println("2. Leave it alone");
+        int choice = scanner.nextInt();
+        
+        if (choice == 1) {
+            player.learnElementalSkill(element);
+            System.out.println("Your attacks now have " + element + " affinity!");
+        }
+    }
+
+    private void findTreasure() {
+        String[] treasures = {"Potion", "Ether", "Fire Stone", "Water Crystal", "Earth Medallion"};
+        String item = treasures[random.nextInt(treasures.length)];
+        
+        player.inventory.put(item, player.inventory.getOrDefault(item, 0) + 1);
+        System.out.println("Found a " + item + "! Added to inventory.");
+    }
+
+    private void useItem(Player player) {
+        System.out.println("\nInventory:");
+        player.inventory.forEach((item, count) -> System.out.println("- " + item + " (" + count + ")"));
+        System.out.print("Choose item: ");
+        String item = scanner.next();
+        
+        if (player.inventory.getOrDefault(item, 0) > 0) {
+            switch(item) {
+                case "Potion":
+                    player.health = Math.min(player.health + 30, player.maxHealth);
+                    System.out.println("Restored 30 HP!");
+                    break;
+                case "Ether":
+                    player.mana = Math.min(player.mana + 25, player.maxMana);
+                    System.out.println("Restored 25 MP!");
+                    break;
+                case "Fire Stone":
+                    player.attackDamage += 5;
+                    System.out.println("Attack boosted by 5 points!");
+                    break;
+                case "Water Crystal":
+                    player.defense += 5;
+                    System.out.println("Defense boosted by 5 points!");
+                    break;
+                case "Earth Medallion":
+                    player.maxHealth += 20;
+                    System.out.println("Max HP increased by 20!");
+                    break;
+                default:
+                    System.out.println("Can't use that item here!");
+                    return;
+            }
+            player.inventory.put(item, player.inventory.get(item) - 1);
+        } else {
+            System.out.println("Item not found!");
+        }
+    }
+
+    private boolean attemptFlee() {
+        if (random.nextDouble() < 0.4) {
+            System.out.println("Escaped successfully!");
+            return true;
+        }
+        System.out.println("Escape failed!");
+        return false;
     }
 
     private void showStatus() {
-        System.out.println("\n--- Player Status ---");
+        System.out.println("\n=== PLAYER STATUS ===");
         System.out.println("Name: " + player.name);
         System.out.println("Level: " + player.level);
-        System.out.println("Health: " + player.health);
+        System.out.println("Health: " + player.health + "/" + player.maxHealth);
+        System.out.println("Mana: " + player.mana + "/" + player.maxMana);
         System.out.println("Attack: " + player.attackDamage);
         System.out.println("Defense: " + player.defense);
-        System.out.println("Potions: " + player.potions);
-        System.out.println("Experience: " + player.experience + "/" + (player.level * 50));
+        System.out.println("Element: " + player.element);
+        System.out.println("XP: " + player.experience + "/" + (player.level * 50));
+    }
+
+    private void showInventory() {
+        System.out.println("\n=== INVENTORY ===");
+        player.inventory.forEach((item, count) -> {
+            if (count > 0) System.out.println("- " + item + " (" + count + ")");
+        });
     }
 
     public static void main(String[] args) {
-        SimpleRPG game = new SimpleRPG();
+        EnhancedRPG game = new EnhancedRPG();
         game.startGame();
     }
 }
