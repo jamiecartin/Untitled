@@ -1,5 +1,7 @@
 package rpg.entities;
 
+import rpg.combat.StatusEffect;
+import rpg.combat.StatusEffectManager;
 import java.util.HashMap;
 
 public class Character {
@@ -10,7 +12,8 @@ public class Character {
     protected int defense;
     protected int level;
     protected HashMap<String, Integer> attributes;
-    protected HashMap<String, Integer> statusEffects;
+    protected StatusEffectManager effectManager;
+    protected boolean isPlayerControlled;
 
     public Character(String name, int health, int attack, int defense) {
         this.name = name;
@@ -20,7 +23,8 @@ public class Character {
         this.defense = defense;
         this.level = 1;
         this.attributes = new HashMap<>();
-        this.statusEffects = new HashMap<>();
+        this.effectManager = new StatusEffectManager(this);
+        this.isPlayerControlled = false;
         initializeBaseAttributes();
     }
 
@@ -35,14 +39,16 @@ public class Character {
 
     // Core Health Methods
     public void takeDamage(int damage) {
-        int effectiveDamage = Math.max(damage - defense, 0);
+        int effectiveDamage = Math.max(damage - calculateDefense(), 0);
         health -= effectiveDamage;
         if (health < 0) health = 0;
+        System.out.println(name + " takes " + effectiveDamage + " damage!");
     }
 
     public void heal(int amount) {
         health += amount;
         if (health > maxHealth) health = maxHealth;
+        System.out.println(name + " heals " + amount + " HP!");
     }
 
     public void restoreHealth() {
@@ -54,24 +60,16 @@ public class Character {
     }
 
     // Status Effect Methods
-    public void applyStatusEffect(String effect, int duration) {
-        statusEffects.put(effect, duration);
-    }
-
-    public void removeStatusEffect(String effect) {
-        statusEffects.remove(effect);
+    public void applyEffect(StatusEffect effect) {
+        effectManager.addEffect(effect);
     }
 
     public void processStatusEffects() {
-        statusEffects.entrySet().removeIf(entry -> {
-            int remaining = entry.getValue() - 1;
-            if (remaining <= 0) {
-                System.out.println(name + " is no longer affected by " + entry.getKey());
-                return true;
-            }
-            entry.setValue(remaining);
-            return false;
-        });
+        effectManager.processEffects();
+    }
+
+    public void clearStatusEffects() {
+        effectManager.clearAllEffects();
     }
 
     // Attribute Management
@@ -112,7 +110,7 @@ public class Character {
         System.out.println("Health: " + health + "/" + maxHealth);
         System.out.println("Attack: " + attack);
         System.out.println("Defense: " + defense);
-        System.out.println("Status Effects: " + statusEffects.keySet());
+        effectManager.displayEffects();
     }
 
     public void displayAttributes() {
@@ -129,4 +127,6 @@ public class Character {
     public int getAttack() { return attack; }
     public int getDefense() { return defense; }
     public int getLevel() { return level; }
+    public boolean isPlayerControlled() { return isPlayerControlled; }
+    public void setPlayerControlled(boolean playerControlled) { isPlayerControlled = playerControlled; }
 }
