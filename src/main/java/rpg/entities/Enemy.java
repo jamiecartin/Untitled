@@ -18,6 +18,12 @@ public class Enemy extends Character {
     private List<Skill> enemySkills;
     private int minGold;
     private int maxGold;
+    private AIDecisionMaker decisionMaker;
+    private AIPerception perception;
+    private AIStrategy currentStrategy;
+    private int positionX;
+    private int positionY;
+    private Character target;
 
     public Enemy(String name, int health, int attack, int defense, EnemyType type) {
         super(name, health, attack, defense);
